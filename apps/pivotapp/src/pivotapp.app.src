@@ -1,0 +1,13 @@
+%% -*- erlang -*-
+{application, pivotapp, [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+    kernel,
+    stdlib,
+    riak_core
+  ]},
+  {mod, { pivotapp_app, []}},
+  {env, []}
+]}.

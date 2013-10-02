@@ -1,0 +1,8 @@
+*.beam
+.eunit
+deps/*
+apps/pivotapp/ebin
+*~
+dev/*
+doc/*
+rel/pivotapp

@@ -1,0 +1,3 @@
+node1: ./dev/dev1/bin/pivotapp console
+node2: ./dev/dev2/bin/pivotapp console
+node3: ./dev/dev3/bin/pivotapp console
