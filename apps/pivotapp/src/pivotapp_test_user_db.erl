@@ -2,7 +2,7 @@
 
 -export([assignments/3]).
 -export([increment_usage/5]).
--export([assign/4]).
+-export([assign/6]).
 -export([unassign/5]).
 
 assignments(_, _, _) ->
@@ -15,7 +15,7 @@ assignments(_, _, _) ->
 increment_usage(_Env, _App, _User, _Bandit, _Arm) ->
   ok.
 
-assign(_Env, _App, _User, _Assignments) ->
+assign(_Env, _App, _User, _Bandit, _Arm, _Expiration) ->
   ok.
 
 unassign(_Env, _App, _User, _Bandit, _Arm) ->

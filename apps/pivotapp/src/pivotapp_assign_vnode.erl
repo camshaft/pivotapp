@@ -32,6 +32,7 @@
   current_assignments,
   assignments = [],
   expiration = 0,
+  enabled_set,
   enabled,
   now
 }).
@@ -106,7 +107,7 @@ lookup_enabled_bandits(Req = #req{ env=Env, app=App }, Ref) ->
   AppDB = pivotapp_ref:app(Ref),
   case AppDB:enabled(Env, App) of
     {ok, Enabled} ->
-      lookup_assignment(Req#req{ enabled=gb_sets:from_list(Enabled) }, Ref);
+      lookup_assignment(Req#req{ enabled_set=gb_sets:from_list(Enabled), enabled=Enabled }, Ref);
     Error ->
       Error
   end.
@@ -128,7 +129,7 @@ validate_assignments([], #req{ assignments=Assignments, expiration=Expiration, n
   {ok, Assignments, Expiration - Now};
 validate_assignments([{_Bandit, _Arm, _Count, Expiration}|Assignments], Req = #req{ now=Now }, Ref) when is_integer(Expiration), Now > Expiration ->
   validate_assignments(Assignments, Req, Ref);
-validate_assignments([{Bandit, Arm, _Count, _Expiration}|Assignments], Req = #req{ env=Env, app=App, enabled=Enabled, assignments=ValidAssignments }, Ref) ->
+validate_assignments([{Bandit, Arm, _Count, _Expiration}|Assignments], Req = #req{ env=Env, app=App, enabled_set=Enabled, assignments=ValidAssignments }, Ref) ->
   case gb_sets:is_member(Bandit, Enabled) of
     false ->
       validate_assignments(Assignments, Req, Ref);
@@ -150,7 +151,7 @@ pick_bandit(_Req = #req{ env=Env, app=App, enabled=Enabled, now=Now }, Ref) ->
 
   {ok, SuperMabAlgo, SuperMabState, _} = StateDB:get(Env, App, ?SUPER_BANDIT),
 
-  EnabledBandits = filter_arms(gb_sets:to_list(Enabled), SuperMabState),
+  EnabledBandits = filter_arms(Enabled, SuperMabState),
   {ok, SuperConfig} = ConfigDB:get(Env, App, ?SUPER_BANDIT),
 
   {ok, Bandit, _} = SuperMabAlgo:select(EnabledBandits, SuperConfig),
