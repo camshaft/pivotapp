@@ -32,8 +32,6 @@
   cardinality
 }).
 
--define(SUPER_BANDIT, <<"$$super-bandit">>).
-
 %% API
 start_vnode(I) ->
   riak_core_vnode_master:get_vnode_pid(I, ?MODULE).
@@ -93,13 +91,14 @@ handle_event({error, notfound}, _, _) ->
 
 lookup_assignments(Event = #event{ env=Env, app=App, user=User }, Ref) ->
   UserDB = pivotapp_ref:user(Ref),
-  {ok, Assignments} = UserDB:assignments(Env, App, User),
-  ok = maybe_reward(Assignments, UserDB, Event).
+  case UserDB:assignments(Env, App, User) of
+    {ok, Assignments} ->
+      ok = maybe_reward(Assignments, UserDB, Event);
+    _ ->
+      ok
+  end.
 
-maybe_reward([{Bandit, Arm, Usages}|Assignments], UserDB, Event = #event{ env=Env, app=App, user=User, cardinality=Cardinality} ) when is_integer(Cardinality), Cardinality =< Usages ->
-  %% remove the assignment from the user - it's expired
-  ok = UserDB:unassign(Env, App, User, Bandit, Arm),
-  ok = reward(Bandit, Arm, Event),
+maybe_reward([{_Bandit, _Arm, Usages}|Assignments], UserDB, Event = #event{cardinality=Cardinality} ) when is_integer(Cardinality), Cardinality =< Usages ->
   maybe_reward(Assignments, UserDB, Event);
 maybe_reward([{Bandit, Arm, _Usages}|Assignments], UserDB, Event = #event{ env=Env, app=App, user=User }) ->
   ok = UserDB:increment_usage(Env, App, User, Bandit, Arm),
@@ -112,5 +111,5 @@ maybe_reward([], _UserDB, _Event) ->
   ok.
 
 reward(Bandit, Arm, #event{ env=Env, app=App, reward=Reward }) ->
-  pivotapp:reward(Env, App, Bandit, Arm, Reward),
+  ok = pivotapp:reward(Env, App, Bandit, Arm, Reward),
   pivotapp:reward(Env, App, ?SUPER_BANDIT, Bandit, Reward).

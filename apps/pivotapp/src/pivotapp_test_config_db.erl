@@ -2,12 +2,12 @@
 
 -export([init/3]).
 -export([get/3]).
--export([set/5]).
+-export([set/4]).
 
 init(_App, _Bandit, _State) ->
   ok.
 
-set(_Env, _App, _Bandit, _State, _Rewards) ->
+set(_Env, _App, _Bandit, _Config) ->
   ok.
 
 get(_Env, _App, _Bandit) ->

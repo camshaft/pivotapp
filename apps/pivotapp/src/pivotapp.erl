@@ -3,6 +3,7 @@
 -include_lib("riak_core/include/riak_core_vnode.hrl").
 
 -export([ping/0]).
+-export([assign/3]).
 -export([event/4]).
 -export([reward/5]).
 
@@ -15,6 +16,11 @@ ping() ->
   [{IndexNode, _Type}] = PrefList,
   riak_core_vnode_master:sync_spawn_command(IndexNode, ping, pivotapp_vnode_master).
 
+assign(Env, App, User) ->
+  DocIdx = riak_core_util:chash_key({App, User}),
+  [Node] = riak_core_apl:get_apl(DocIdx, 1, pivotapp_assign),
+  pivotapp_assign_vnode:assign(Node, Env, App, User).
+
 event(Env, App, Event, User) ->
   DocIdx = riak_core_util:chash_key({App, Event}),
   [Node] = riak_core_apl:get_apl(DocIdx, 1, pivotapp_event),
@@ -24,10 +30,5 @@ reward(Env, App, Bandit, Arm, Reward) ->
   DocIdx = riak_core_util:chash_key({App, Bandit}),
   [Node] = riak_core_apl:get_apl(DocIdx, 1, pivotapp_state),
   pivotapp_state_vnode:reward(Node, Env, App, Bandit, Arm, Reward).
-
-assign(Env, App, User) ->
-  DocIdx = riak_core_util:chash_key({App, User}),
-  [Node] = riak_core_apl:get_apl(DocIdx, 1, pivotapp_assign),
-  pivotapp_assign_vnode:assign(Node, Env, App, User).
 
 % internal

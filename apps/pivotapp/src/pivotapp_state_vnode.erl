@@ -45,7 +45,7 @@ handle_command({reward, Env, App, Bandit, Arm, Reward}, _Sender, State = #state{
   true = ets:insert(Buffer, {{Env, App, Bandit}, {Arm, Reward}}),
   {noreply, State}.
 
-handle_info(flush, State = #state{buffer = Buffer, ref=Ref}) ->
+handle_info(flush, State = #state{ buffer=Buffer, ref=Ref }) ->
   case buffer_empty(State) of
     true ->
       flush(),
@@ -67,11 +67,13 @@ handoff_cancelled(State) ->
 handoff_finished(_TargetNode, State) ->
   {ok, State}.
 
-handle_handoff_data(_Data, State) ->
+handle_handoff_data(Data, State = #state{ buffer=Buffer }) ->
+  {Key, Value} = binary_to_term(Data),
+  true = ets:insert(Buffer, Key, Value),
   {reply, ok, State}.
 
-encode_handoff_item(_ObjectName, _ObjectValue) ->
-  <<>>.
+encode_handoff_item(Key, Value) ->
+  term_to_binary({Key, Value}).
 
 is_empty(State) ->
   {buffer_empty(State), State}.
@@ -88,6 +90,7 @@ handle_exit(_Pid, _Reason, State) ->
 terminate(_Reason, _State) ->
   ok.
 
+%% private
 buffer_empty(#state{buffer = Buffer}) ->
   ets:info(Buffer, size) =:= 0.
 

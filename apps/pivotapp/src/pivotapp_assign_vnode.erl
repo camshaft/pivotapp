@@ -34,7 +34,7 @@
 start_vnode(I) ->
   riak_core_vnode_master:get_vnode_pid(I, ?MODULE).
 
-handle(Node, Env, App, User) ->
+assign(Node, Env, App, User) ->
   riak_core_vnode_master:sync_command(Node, {assign, Env, App, User}, pivotapp_assign_vnode_master).
 
 %% Callbacks
