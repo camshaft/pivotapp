@@ -128,6 +128,8 @@ validate_assignments([], Req = #req{ assignments=[] }, Ref) ->
 validate_assignments([], #req{ assignments=Assignments, expiration=Expiration, now=Now }, _Ref) ->
   {ok, Assignments, Expiration - Now};
 validate_assignments([{_Bandit, _Arm, _Count, Expiration}|Assignments], Req = #req{ now=Now }, Ref) when is_integer(Expiration), Now > Expiration ->
+  %% TODO unassign
+  %% TODO penalize the bandit/arm if the count is 0
   validate_assignments(Assignments, Req, Ref);
 validate_assignments([{Bandit, Arm, _Count, _Expiration}|Assignments], Req = #req{ env=Env, app=App, enabled_set=Enabled, assignments=ValidAssignments }, Ref) ->
   case gb_sets:is_member(Bandit, Enabled) of
@@ -145,23 +147,24 @@ validate_assignments([{Bandit, Arm, _Count, _Expiration}|Assignments], Req = #re
       end
   end.
 
-pick_bandit(Req = #req{ env=Env, app=App, enabled=EnabledBandits, now=Now }, Ref) ->
+pick_bandit(Req = #req{ env=Env, app=App, enabled=EnabledBandits, now=Now, user=User }, Ref) ->
   {ok, Bandit, _} = select_arm(?SUPER_BANDIT, EnabledBandits, Req, Ref),
 
-  ArmsDB = pivotapp_ref:arms(Ref),
-  {ok, EnabledArms} = ArmsDB:enabled(Env, App, Bandit),
+  case (pivotapp_ref:arms(Ref)):enabled(Env, App, Bandit) of
+    {ok, []} ->
+      {ok, [], Now + ?DEFAULT_TTL};
+    {ok, EnabledArms} ->
+      {ok, Arm, Config} = select_arm(Bandit, EnabledArms, Req, Ref),
 
-  {ok, Arm, Config} = select_arm(Bandit, EnabledArms, Req, Ref),
+      Expiration = Now + fast_key:get(ttl, Config, ?DEFAULT_TTL),
 
-  Expiration = Now + fast_key:get(ttl, Config, ?DEFAULT_TTL),
+      UserDB = pivotapp_ref:user(Ref),
+      ok = UserDB:assign(Env, App, User, Bandit, Arm, Expiration),
 
-  _Assignments = [
-    {Bandit, Arm, 0, Expiration}
-  ],
-
-  %% TODO save the user assignments back to the db
-
-  {ok, [{Bandit, Arm}], Expiration}.
+      {ok, [{Bandit, Arm}], Expiration};
+    Error ->
+      Error
+  end.
 
 select_arm(Bandit, EnabledArms, #req{ env=Env, app=App }, Ref) ->
   StateDB = pivotapp_ref:state(Ref),

@@ -20,7 +20,7 @@ start(_StartType, _StartArgs) ->
   ok = riakou:wait_for_connection(),
 
   pivotapp_ref:set(user, pivotapp_test_user_db),
-  pivotapp_ref:set(arms, pivotapp_test_arms_db),
+  pivotapp_ref:set(arms, pivot_mab_arms_db_riak),
   pivotapp_ref:set(state, pivotapp_test_state_db),
   pivotapp_ref:set(config, pivotapp_test_config_db),
   pivotapp_ref:set(event, pivot_event_db_riak),
