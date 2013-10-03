@@ -13,17 +13,25 @@
 %% ===================================================================
 
 start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+  supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 %% ===================================================================
 %% Supervisor callbacks
 %% ===================================================================
 
 init(_Args) ->
-    VMaster = { pivotapp_vnode_master,
-                  {riak_core_vnode_master, start_link, [pivotapp_vnode]},
-                  permanent, 5000, worker, [riak_core_vnode_master]},
+  Procs = [
+    vnode(pivotapp_vnode, pivotapp_vnode_master),
+    vnode(pivotapp_event_vnode, pivotapp_event_vnode_master),
+    vnode(pivotapp_state_vnode, pivotapp_state_vnode_master)
+  ],
 
-    { ok,
-        { {one_for_one, 5, 10},
-          [VMaster]}}.
+  {ok, {{one_for_one, 5, 10}, Procs}}.
+
+vnode(Name, Master) ->
+  {
+    Master, {
+      riak_core_vnode_master, start_link, [Name]
+    }, permanent, 5000, worker, [Master]
+  }.
+ 

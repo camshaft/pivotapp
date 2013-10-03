@@ -3,6 +3,8 @@
 -include_lib("riak_core/include/riak_core_vnode.hrl").
 
 -export([ping/0]).
+-export([event/4]).
+-export([reward/5]).
 
 %% Public API
 
@@ -13,9 +15,14 @@ ping() ->
   [{IndexNode, _Type}] = PrefList,
   riak_core_vnode_master:sync_spawn_command(IndexNode, ping, pivotapp_vnode_master).
 
-track(Env, App, Event, User) ->
+event(Env, App, Event, User) ->
   DocIdx = riak_core_util:chash_key({App, Event}),
-  [{Node, _Type}] = riak_core_apl:get_primary_apl(DocIdx, 1, pivotapp_track),
-  pivotapp_track_vnode:track(Node, Env, App, Event, User).
+  [Node] = riak_core_apl:get_apl(DocIdx, 1, pivotapp_event),
+  pivotapp_event_vnode:handle(Node, Env, App, Event, User).
+
+reward(Env, App, Bandit, Arm, Reward) ->
+  DocIdx = riak_core_util:chash_key({App, Bandit}),
+  [Node] = riak_core_apl:get_apl(DocIdx, 1, pivotapp_state),
+  pivotapp_state_vnode:reward(Node, Env, App, Bandit, Arm, Reward).
 
 % internal

@@ -6,7 +6,8 @@
   {applications, [
     kernel,
     stdlib,
-    riak_core
+    riak_core,
+    ref_server
   ]},
   {mod, { pivotapp_app, []}},
   {env, []}
