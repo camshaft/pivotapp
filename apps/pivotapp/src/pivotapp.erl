@@ -4,6 +4,7 @@
 
 -export([ping/0]).
 -export([assign/3]).
+-export([assign/4]).
 -export([event/4]).
 -export([reward/5]).
 
@@ -17,9 +18,12 @@ ping() ->
   riak_core_vnode_master:sync_spawn_command(IndexNode, ping, pivotapp_vnode_master).
 
 assign(Env, App, User) ->
+  assign(Env, App, undefined, User).
+
+assign(Env, App, AppVersion, User) ->
   DocIdx = riak_core_util:chash_key({App, User}),
   [Node] = riak_core_apl:get_apl(DocIdx, 1, pivotapp_assign),
-  pivotapp_assign_vnode:assign(Node, Env, App, User).
+  pivotapp_assign_vnode:assign(Node, Env, App, AppVersion, User).
 
 event(Env, App, Event, User) ->
   DocIdx = riak_core_util:chash_key({App, Event}),

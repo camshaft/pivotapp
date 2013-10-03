@@ -24,7 +24,12 @@ init(_Args) ->
     vnode(pivotapp_vnode, pivotapp_vnode_master),
     vnode(pivotapp_assign_vnode, pivotapp_assign_vnode_master),
     vnode(pivotapp_event_vnode, pivotapp_event_vnode_master),
-    vnode(pivotapp_state_vnode, pivotapp_state_vnode_master)
+    vnode(pivotapp_state_vnode, pivotapp_state_vnode_master),
+    {
+      pivotapp_clock, {
+        pivotapp_clock, start_link, []
+      }, permanent, 5000, worker, [pivotapp_clock]
+    }
   ],
 
   {ok, {{one_for_one, 5, 10}, Procs}}.

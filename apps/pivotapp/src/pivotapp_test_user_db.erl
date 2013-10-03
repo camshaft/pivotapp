@@ -2,17 +2,21 @@
 
 -export([assignments/3]).
 -export([increment_usage/5]).
--export([assign/5]).
+-export([assign/4]).
 -export([unassign/5]).
 
 assignments(_, _, _) ->
-  {ok, [{<<"bandit-1">>, <<"arm1">>, 1}]}.
+  {ok, [
+    {<<"bandit-1">>, <<"arm1">>, 1, 9999999999},
+    {<<"bandit-2">>, <<"arm3">>, 1, 9999999999},
+    {<<"expired">>, <<"arm1">>, 1, 123}
+  ]}.
 
 increment_usage(_Env, _App, _User, _Bandit, _Arm) ->
   ok.
 
-assign(_Env, _App, _User, _Bandit, _Arm) ->
+assign(_Env, _App, _User, _Assignments) ->
   ok.
 
-unassign(_Emv, _App, _User, _Bandit, _Arm) ->
+unassign(_Env, _App, _User, _Bandit, _Arm) ->
   ok.

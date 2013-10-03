@@ -24,12 +24,13 @@
   ref
 }).
 
--record(event, {
+-record(req, {
   env,
   app,
   user,
   reward,
-  cardinality
+  cardinality,
+  now
 }).
 
 %% API
@@ -45,7 +46,7 @@ init([Partition]) ->
 
 handle_command({event, Env, App, Event, User}, _Sender, State = #state{ ref=Ref }) ->
   EventDB = pivotapp_ref:event(Ref),
-  handle_event(EventDB:get(Env, App, Event), #event{env = Env, app = App, user = User}, Ref),
+  handle_event(EventDB:get(Env, App, Event), #req{env=Env, app=App, user=User, now=pivotapp_clock:time()}, Ref),
   {noreply, State}.
 
 handle_handoff_command(_Message, _Sender, State) ->
@@ -83,13 +84,13 @@ terminate(_Reason, _State) ->
 
 %% internal
 handle_event({ok, Reward, Cardinality}, Event, Ref) ->
-  lookup_assignments(Event#event{ reward=Reward, cardinality=Cardinality }, Ref);
+  lookup_assignments(Event#req{ reward=Reward, cardinality=Cardinality }, Ref);
 handle_event({ok, Reward}, Event, Ref) ->
-  lookup_assignments(Event#event{ reward=Reward }, Ref);
+  lookup_assignments(Event#req{ reward=Reward }, Ref);
 handle_event({error, notfound}, _, _) ->
   ok.
 
-lookup_assignments(Event = #event{ env=Env, app=App, user=User }, Ref) ->
+lookup_assignments(Event = #req{ env=Env, app=App, user=User }, Ref) ->
   UserDB = pivotapp_ref:user(Ref),
   case UserDB:assignments(Env, App, User) of
     {ok, Assignments} ->
@@ -98,18 +99,18 @@ lookup_assignments(Event = #event{ env=Env, app=App, user=User }, Ref) ->
       ok
   end.
 
-maybe_reward([{_Bandit, _Arm, Usages}|Assignments], UserDB, Event = #event{cardinality=Cardinality} ) when is_integer(Cardinality), Cardinality =< Usages ->
+maybe_reward([{_Bandit, _Arm, Usages, _Expiration}|Assignments], UserDB, Event = #req{cardinality=Cardinality} ) when is_integer(Cardinality), Cardinality =< Usages ->
   maybe_reward(Assignments, UserDB, Event);
-maybe_reward([{Bandit, Arm, _Usages}|Assignments], UserDB, Event = #event{ env=Env, app=App, user=User }) ->
+maybe_reward([{Bandit, Arm, _Usages, Expiration}|Assignments], UserDB, Event = #req{ env=Env, app=App, user=User, now=Now }) when is_integer(Expiration), Now > Expiration ->
+  ok = UserDB:unassign(Env, App, User, Bandit, Arm),
+  maybe_reward(Assignments, UserDB, Event);
+maybe_reward([{Bandit, Arm, _Usages, _Expiration}|Assignments], UserDB, Event = #req{ env=Env, app=App, user=User }) ->
   ok = UserDB:increment_usage(Env, App, User, Bandit, Arm),
-  ok = reward(Bandit, Arm, Event),
-  maybe_reward(Assignments, UserDB, Event);
-maybe_reward([{Bandit, Arm}|Assignments], UserDB, Event) ->
   ok = reward(Bandit, Arm, Event),
   maybe_reward(Assignments, UserDB, Event);
 maybe_reward([], _UserDB, _Event) ->
   ok.
 
-reward(Bandit, Arm, #event{ env=Env, app=App, reward=Reward }) ->
+reward(Bandit, Arm, #req{ env=Env, app=App, reward=Reward }) ->
   ok = pivotapp:reward(Env, App, Bandit, Arm, Reward),
   pivotapp:reward(Env, App, ?SUPER_BANDIT, Bandit, Reward).

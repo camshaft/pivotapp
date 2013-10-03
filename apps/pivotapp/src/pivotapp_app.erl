@@ -19,13 +19,12 @@ start(_StartType, _StartArgs) ->
   ok = riakou:start_link(RiakURL, [], Min, Max),
   ok = riakou:wait_for_connection(),
 
-  DB = pivotapp,
   pivotapp_ref:set(user, pivotapp_test_user_db),
-  pivotapp_ref:set(arms, DB),
+  pivotapp_ref:set(arms, pivotapp_test_arms_db),
   pivotapp_ref:set(state, pivotapp_test_state_db),
   pivotapp_ref:set(config, pivotapp_test_config_db),
   pivotapp_ref:set(event, pivot_event_db_riak),
-  pivotapp_ref:set(app, DB),
+  pivotapp_ref:set(app, pivotapp_test_app_db),
 
   case pivotapp_sup:start_link() of
     {ok, Pid} ->

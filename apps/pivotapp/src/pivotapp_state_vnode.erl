@@ -112,7 +112,7 @@ update_bandit(Key = {Env, App, Bandit}, Buffer, StateDB, ConfigDB) ->
   %% TODO could we parallelize this?
   {ok, MabAlgo, MabState, Version} = StateDB:get(Env, App, Bandit),
   {ok, Config} = ConfigDB:get(Env, App, Bandit),
-  Rewards = [Value || {_, Value} <- ets:lookup(Buffer, Key)],
+  Rewards = ets:lookup_element(Buffer, Key, 2),
 
   {ok, NewMabState} = update_arm(Rewards, MabAlgo, MabState, Config),
   ok = StateDB:set(Env, App, Bandit, NewMabState, Rewards, Version),
