@@ -22,6 +22,7 @@ start_link() ->
 init(_Args) ->
   Procs = [
     vnode(pivotapp_vnode, pivotapp_vnode_master),
+    vnode(pivotapp_assign_vnode, pivotapp_assign_vnode_master),
     vnode(pivotapp_event_vnode, pivotapp_event_vnode_master),
     vnode(pivotapp_state_vnode, pivotapp_state_vnode_master)
   ],
@@ -34,4 +35,3 @@ vnode(Name, Master) ->
       riak_core_vnode_master, start_link, [Name]
     }, permanent, 5000, worker, [Master]
   }.
- 

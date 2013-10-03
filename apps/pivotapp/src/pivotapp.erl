@@ -25,4 +25,9 @@ reward(Env, App, Bandit, Arm, Reward) ->
   [Node] = riak_core_apl:get_apl(DocIdx, 1, pivotapp_state),
   pivotapp_state_vnode:reward(Node, Env, App, Bandit, Arm, Reward).
 
+assign(Env, App, User) ->
+  DocIdx = riak_core_util:chash_key({App, User}),
+  [Node] = riak_core_apl:get_apl(DocIdx, 1, pivotapp_assign),
+  pivotapp_assign_vnode:assign(Node, Env, App, User).
+
 % internal

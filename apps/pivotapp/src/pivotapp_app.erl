@@ -30,6 +30,7 @@ start(_StartType, _StartArgs) ->
   case pivotapp_sup:start_link() of
     {ok, Pid} ->
       ok = riak_core:register([{vnode_module, pivotapp_vnode}]),
+      ok = riak_core:register([{vnode_module, pivotapp_assign_vnode}]),
       ok = riak_core:register([{vnode_module, pivotapp_event_vnode}]),
       ok = riak_core:register([{vnode_module, pivotapp_state_vnode}]),
 
@@ -37,6 +38,7 @@ start(_StartType, _StartArgs) ->
       ok = riak_core_node_watcher_events:add_guarded_handler(pivotapp_node_event_handler, []),
 
       ok = riak_core_node_watcher:service_up(pivotapp, self()),
+      ok = riak_core_node_watcher:service_up(pivotapp_assign, self()),
       ok = riak_core_node_watcher:service_up(pivotapp_event, self()),
       ok = riak_core_node_watcher:service_up(pivotapp_state, self()),
 
