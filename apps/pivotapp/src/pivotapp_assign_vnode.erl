@@ -145,26 +145,13 @@ validate_assignments([{Bandit, Arm, _Count, _Expiration}|Assignments], Req = #re
       end
   end.
 
-pick_bandit(_Req = #req{ env=Env, app=App, enabled=Enabled, now=Now }, Ref) ->
-  StateDB = pivotapp_ref:state(Ref),
-  ConfigDB = pivotapp_ref:config(Ref),
-
-  {ok, SuperMabAlgo, SuperMabState, _} = StateDB:get(Env, App, ?SUPER_BANDIT),
-
-  EnabledBandits = filter_arms(Enabled, SuperMabState),
-  {ok, SuperConfig} = ConfigDB:get(Env, App, ?SUPER_BANDIT),
-
-  {ok, Bandit, _} = SuperMabAlgo:select(EnabledBandits, SuperConfig),
+pick_bandit(Req = #req{ env=Env, app=App, enabled=EnabledBandits, now=Now }, Ref) ->
+  {ok, Bandit, _} = select_arm(?SUPER_BANDIT, EnabledBandits, Req, Ref),
 
   ArmsDB = pivotapp_ref:arms(Ref),
-  {ok, EnabledArmsList} = ArmsDB:enabled(Env, App, Bandit),
+  {ok, EnabledArms} = ArmsDB:enabled(Env, App, Bandit),
 
-  {ok, SelectedMabAlgo, SelectedMabState, _} = StateDB:get(Env, App, Bandit),
-
-  FilteredMabState = filter_arms(EnabledArmsList, SelectedMabState),
-  {ok, Config} = ConfigDB:get(Env, App, Bandit),
-
-  {ok, Arm, _} = SelectedMabAlgo:select(FilteredMabState, Config),
+  {ok, Arm, Config} = select_arm(Bandit, EnabledArms, Req, Ref),
 
   Expiration = Now + fast_key:get(ttl, Config, ?DEFAULT_TTL),
 
@@ -176,5 +163,13 @@ pick_bandit(_Req = #req{ env=Env, app=App, enabled=Enabled, now=Now }, Ref) ->
 
   {ok, [{Bandit, Arm}], Expiration}.
 
-filter_arms(Enabled, MabState) ->
-  [fast_key:get(Bandit, MabState, {Bandit, {0, 0.0}}) || Bandit <- Enabled].
+select_arm(Bandit, EnabledArms, #req{ env=Env, app=App }, Ref) ->
+  StateDB = pivotapp_ref:state(Ref),
+  ConfigDB = pivotapp_ref:config(Ref),
+
+  {ok, MabAlgo, MabState, _} = StateDB:get(Env, App, Bandit),
+  {ok, Config} = ConfigDB:get(Env, App, Bandit),
+
+  FilteredState = [fast_key:get(Arm, MabState, {Arm, {0, 0.0}}) || Arm <- EnabledArms],
+  {ok, SelectedArm, _} = MabAlgo:select(FilteredState, Config),
+  {ok, SelectedArm, Config}.
