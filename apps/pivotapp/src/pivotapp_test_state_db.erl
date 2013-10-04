@@ -1,19 +1,26 @@
 -module(pivotapp_test_state_db).
 
--export([init/3]).
+-export([start_link/0]).
+
+-export([init/4]).
 -export([get/3]).
 -export([set/6]).
 
-init(_App, _Bandit, _State) ->
+start_link() ->
+  ?MODULE = ets:new(?MODULE, [public, named_table]).
+
+init(Env, App, Bandit, State) ->
+  set(Env, App, Bandit, State, [], 1).
+
+set(Env, App, Bandit, State, _Rewards, _Version) ->
+  true = ets:insert(?MODULE, {{Env, App, Bandit}, State}),
   ok.
 
-set(_Env, _App, _Bandit, _State, _Rewards, _Version) ->
-  io:format("~p~n", [_State]),
-  ok.
-
-get(_Env, _App, _Bandit) ->
-  {ok, pivot_mab_ucb1, [
-    {<<"arm1">>, {100, 80.0}},
-    {<<"arm2">>, {90, 60.0}},
-    {<<"arm3">>, {60, 5.0}}
-  ], riak_obj}.
+get(Env, App, Bandit) ->
+  try ets:lookup_element(?MODULE, {Env, App, Bandit}, 2) of
+    State ->
+      {ok, pivot_mab_ucb1, State, 1}
+  catch
+    _:_ ->
+      {ok, pivot_mab_ucb1, [], 1}
+  end.

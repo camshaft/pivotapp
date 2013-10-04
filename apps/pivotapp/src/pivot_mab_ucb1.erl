@@ -47,14 +47,16 @@ calculate_score(TotalCount, Count, Score) ->
     | {error, any()}
     when Arm::pivot_mab:arm(), Reward::pivot_mab:reward(), State::pivot_mab:state(), Config::pivot_mab:config().
 update(ArmName, Reward, State, _Config) when Reward > 0.0 orelse Reward < 1.0 ->
-  {ok, [update_score(ArmName, Reward, Arm) || Arm <- State]}.
+  {ok, update_score(ArmName, Reward, State, [])}.
 
-update_score(ArmName, Reward, {ArmName, {Count, Score}}) ->
+update_score(ArmName, Reward, [], Acc) ->
+  lists:reverse([{ArmName, {1, Reward}}|Acc]);
+update_score(ArmName, Reward, [{ArmName, {Count, Score}}|State], Acc) ->
   N = Count + 1,
   NewScore = ((N - 1.0) / N) * Score + (1.0 / N) * Reward,
-  {ArmName, {N, NewScore}};
-update_score(_, _, Arm) ->
-  Arm.
+  lists:reverse(Acc) ++ [{ArmName, {N, NewScore}}|State];
+update_score(ArmName, Reward, [Arm|State], Acc) ->
+  update_score(ArmName, Reward, State, [Arm|Acc]).
 
 diff(OldState, NewState, _Config) ->
   {ok, do_diff(OldState, NewState, [])}.

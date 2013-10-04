@@ -12,6 +12,8 @@
 start(_StartType, _StartArgs) ->
   require([ref_server]),
 
+  sync:go(),
+
   ok = riakou:start(),
   RiakURL = simple_env:get_binary("RIAK_URL", <<"riak://localhost">>),
   Min = simple_env:get_integer("RIAK_POOL_MIN", 5),
@@ -19,11 +21,38 @@ start(_StartType, _StartArgs) ->
   ok = riakou:start_link(RiakURL, [], Min, Max),
   ok = riakou:wait_for_connection(),
 
+  pivotapp_test_arms_db:start_link(),
+  pivotapp_test_state_db:start_link(),
+  pivotapp_test_user_db:start_link(),
+
+  [pivotapp_test_arms_db:add(<<"env">>, <<"app">>, <<"button-color">>, Arm) || Arm <- [
+    <<"red">>,
+    <<"blue">>,
+    <<"green">>
+  ]],
+  [pivotapp_test_arms_db:add(<<"env">>, <<"app">>, <<"logo">>, Arm) || Arm <- [
+    <<"big">>,
+    <<"medium">>,
+    <<"small">>
+  ]],
+
+  pivotapp_test_state_db:init(<<"env">>, <<"app">>, <<"button-color">>, [
+    {<<"red">>, {0, 0.0}},
+    {<<"blue">>, {0, 0.0}},
+    {<<"green">>, {0, 0.0}}
+  ]),
+
+  pivotapp_test_state_db:init(<<"env">>, <<"app">>, <<"logo">>, [
+    {<<"big">>, {0, 0.0}},
+    {<<"medium">>, {0, 0.0}},
+    {<<"small">>, {0, 0.0}}
+  ]),
+
   pivotapp_ref:set(user, pivotapp_test_user_db),
-  pivotapp_ref:set(arms, pivot_mab_arms_db_riak),
+  pivotapp_ref:set(arms, pivotapp_test_arms_db),
   pivotapp_ref:set(state, pivotapp_test_state_db),
   pivotapp_ref:set(config, pivotapp_test_config_db),
-  pivotapp_ref:set(event, pivot_event_db_riak),
+  pivotapp_ref:set(event, pivotapp_test_event_db),
   pivotapp_ref:set(app, pivotapp_test_app_db),
 
   case pivotapp_sup:start_link() of

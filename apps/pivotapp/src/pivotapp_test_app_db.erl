@@ -8,7 +8,7 @@ enabled(Env, App) ->
   bandits(Env, App).
 
 bandits(_Env, _App) ->
-  {ok, [<<"bandit-1">>, <<"bandit-2">>, <<"bandit-3">>]}.
+  {ok, [<<"button-color">>, <<"logo">>]}.
 
 add(_Env, _App, _Bandit) ->
   ok.

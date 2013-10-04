@@ -173,6 +173,6 @@ select_arm(Bandit, EnabledArms, #req{ env=Env, app=App }, Ref) ->
   {ok, MabAlgo, MabState, _} = StateDB:get(Env, App, Bandit),
   {ok, Config} = ConfigDB:get(Env, App, Bandit),
 
-  FilteredState = [fast_key:get(Arm, MabState, {Arm, {0, 0.0}}) || Arm <- EnabledArms],
+  FilteredState = [{Arm, fast_key:get(Arm, MabState, {0, 0.0})} || Arm <- EnabledArms],
   {ok, SelectedArm, _} = MabAlgo:select(FilteredState, Config),
   {ok, SelectedArm, Config}.
