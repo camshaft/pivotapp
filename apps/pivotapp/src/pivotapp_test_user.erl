@@ -26,8 +26,8 @@ user_id() ->
 
 start(ID) ->
   wait(ID),
-  {ok, Assignments, _Expiration} = pivotapp:assign(<<"env">>, <<"app">>, ID),
-  % io:format("~p\t\t~p~n", [ID, Assignments]),
+  {ok, Assignments, _} = pivotapp:assign(<<"env">>, <<"app">>, ID),
+  io:format("~p\t\t~p~n", [ID, Assignments]),
   [begin
     wait(ID),
     ok = pivotapp:event(<<"env">>, <<"app">>, events(Assignments), ID)

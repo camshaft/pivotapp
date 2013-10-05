@@ -112,5 +112,5 @@ maybe_reward([], _UserDB, _Event) ->
   ok.
 
 reward(Bandit, Arm, #req{ env=Env, app=App, reward=Reward }) ->
-  ok = pivotapp:reward(Env, App, Bandit, Arm, Reward * 1.1),
-  pivotapp:reward(Env, App, ?SUPER_BANDIT, Bandit, Reward).
+  ok = pivotapp:reward(Env, App, Bandit, Arm, Reward),
+  pivotapp:reward(Env, App, ?SUPER_BANDIT, <<Bandit/binary, "||||", Arm/binary>>, Reward).

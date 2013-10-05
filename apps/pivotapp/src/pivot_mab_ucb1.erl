@@ -41,8 +41,8 @@ choose_best_arm(_, {HighArm, _}, [], State, _) ->
 
 calculate_score(TotalCount, Count, Score, true) ->
   Score + math:sqrt((2 * math:log(TotalCount)) / Count);
-calculate_score(_TotalCount, _Count, Score, _) ->
-  Score.
+calculate_score(TotalCount, Count, Score, _) ->
+  Score + math:sqrt((math:log(TotalCount)) / Count).
 
 -spec update(Arm, Reward, State, Config)
     -> {ok, State}

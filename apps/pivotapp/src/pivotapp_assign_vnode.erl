@@ -147,8 +147,16 @@ validate_assignments([{Bandit, Arm, _Count, _Expiration}|Assignments], Req = #re
       end
   end.
 
-pick_bandit(Req = #req{ env=Env, app=App, enabled=EnabledBandits, now=Now, user=User }, Ref) ->
-  {ok, ExplorationBandit} = select_arm(?SUPER_BANDIT, EnabledBandits, Req, Ref, true),
+pick_bandit(#req{ env=Env, app=App, enabled=EnabledBandits, now=Now, user=User }, Ref) ->
+  StateDB = pivotapp_ref:state(Ref),
+  ConfigDB = pivotapp_ref:config(Ref),
+
+  {ok, SuperMabAlgo, SuperMabState, _} = StateDB:get(Env, App, ?SUPER_BANDIT),
+
+  FilteredSuperBandits = filter_super_bandits(EnabledBandits, SuperMabState, []),
+
+  {ok, ExplorationBandit, _} = SuperMabAlgo:select(FilteredSuperBandits, [explore]),
+
   ArmsDB = pivotapp_ref:arms(Ref),
   UserDB = pivotapp_ref:user(Ref),
 
@@ -156,26 +164,34 @@ pick_bandit(Req = #req{ env=Env, app=App, enabled=EnabledBandits, now=Now, user=
 
   Assignments = [begin
     {ok, EnabledArms} = ArmsDB:enabled(Env, App, Bandit),
-    {ok, Arm} = select_arm(Bandit, EnabledArms, Req, Ref, ExplorationBandit =:= Bandit),
+    {ok, MabAlgo, MabState, _} = StateDB:get(Env, App, Bandit),
+    {ok, Config} = ConfigDB:get(Env, App, Bandit),
 
-    ok = UserDB:assign(Env, App, User, Bandit, Arm, Expiration),
+    FilteredState = [{Arm, fast_key:get(Arm, MabState, {0, 0.0})} || Arm <- EnabledArms],
 
-    {Bandit, Arm}
+    Options = case ExplorationBandit =:= Bandit of
+      true ->
+        [explore];
+      _ ->
+        []
+    end,
+
+    {ok, SelectedArm, _} = MabAlgo:select(FilteredState, Config ++ Options),
+
+    ok = UserDB:assign(Env, App, User, Bandit, SelectedArm, Expiration),
+
+    {Bandit, SelectedArm}
   end || Bandit <- EnabledBandits],
 
   {ok, Assignments, Expiration}.
 
-select_arm(Bandit, EnabledArms, Req, Ref, true) ->
-  select_arm(Bandit, EnabledArms, Req, Ref, [explore]);
-select_arm(Bandit, EnabledArms, Req, Ref, false) ->
-  select_arm(Bandit, EnabledArms, Req, Ref, []);
-select_arm(Bandit, EnabledArms, #req{ env=Env, app=App }, Ref, Options) ->
-  StateDB = pivotapp_ref:state(Ref),
-  ConfigDB = pivotapp_ref:config(Ref),
-
-  {ok, MabAlgo, MabState, _} = StateDB:get(Env, App, Bandit),
-  {ok, Config} = ConfigDB:get(Env, App, Bandit),
-
-  FilteredState = [{Arm, fast_key:get(Arm, MabState, {0, 0.0})} || Arm <- EnabledArms],
-  {ok, SelectedArm, _} = MabAlgo:select(FilteredState, Config ++ Options),
-  {ok, SelectedArm}.
+filter_super_bandits(_, [], Filtered) ->
+  lists:reverse(Filtered);
+filter_super_bandits(Enabled, [{Arm, Scores}|State], Filtered) ->
+  [Bandit|_] = binary:split(Arm, <<"||||">>),
+  case lists:member(Bandit, Enabled) of
+    true ->
+      filter_super_bandits(Enabled, State, [{Bandit, Scores}|Filtered]);
+    _ ->
+      filter_super_bandits(Enabled, State, [{Bandit, {0, 0.0}}|Filtered])
+  end.
