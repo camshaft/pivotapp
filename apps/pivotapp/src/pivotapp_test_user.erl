@@ -11,7 +11,7 @@ run(Max) ->
 
 run(Max, Count) when Count =:= Max ->
   ok;
-run(Max, Count) when 0 =:= Max rem 10 ->
+run(Max, Count) when 0 =:= Max rem 5 ->
   ID = user_id(),
   wait(ID),
   spawn_link(?MODULE, start, [ID]),
@@ -26,30 +26,38 @@ user_id() ->
 
 start(ID) ->
   wait(ID),
-  {ok, [{Bandit, Arm}], _Expiration} = pivotapp:assign(<<"env">>, <<"app">>, ID),
-  io:format("~p\t\t~p~n", [ID, Arm]),
+  {ok, Assignments, _Expiration} = pivotapp:assign(<<"env">>, <<"app">>, ID),
+  % io:format("~p\t\t~p~n", [ID, Assignments]),
   [begin
     wait(ID),
-    ok = pivotapp:event(<<"env">>, <<"app">>, weight(events(Bandit, Arm)), ID)
+    ok = pivotapp:event(<<"env">>, <<"app">>, events(Assignments), ID)
   end || _ <- lists:seq(0, crypto:rand_uniform(3, 10))].
 
 wait(_ID)->
-  Time = crypto:rand_uniform(0, 10),
+  Time = crypto:rand_uniform(0, 500),
   timer:sleep(Time).
+
+events(Assignments) ->
+  % io:format("Assignments ~p~n", [Assignments]),
+  Events = [weight(events(Bandit, Arm)) || {Bandit, Arm} <- Assignments],
+  % io:format("Events ~p~n", [Events]),
+  Event = lists:nth(crypto:rand_uniform(1, length(Events)+1), Events),
+  % io:format("Event ~p~n", [Event]),
+  Event.
 
 events(<<"button-color">>, <<"red">>) ->
   [
-    {<<"purchase">>, 0},
-    {<<"add-to-cart">>, 0},
-    {<<"leave-site">>, 100},
+    {<<"purchase">>, 10},
+    {<<"add-to-cart">>, 20},
+    {<<"leave-site">>, 50},
     {<<"view-item">>, 10}
   ];
 events(<<"button-color">>, <<"blue">>) ->
   [
-    {<<"purchase">>, 0},
-    {<<"add-to-cart">>, 0},
-    {<<"view-item">>, 0},
-    {<<"leave-site">>, 100}
+    {<<"purchase">>, 10},
+    {<<"add-to-cart">>, 50},
+    {<<"view-item">>, 10},
+    {<<"leave-site">>, 30}
   ];
 events(<<"button-color">>, <<"green">>) ->
   [
@@ -57,6 +65,13 @@ events(<<"button-color">>, <<"green">>) ->
     {<<"add-to-cart">>, 10},
     {<<"leave-site">>, 60},
     {<<"view-item">>, 30}
+  ];
+events(<<"button-color">>, <<"yellow">>) ->
+  [
+    {<<"purchase">>, 0},
+    {<<"add-to-cart">>, 10},
+    {<<"leave-site">>, 70},
+    {<<"view-item">>, 20}
   ];
 events(<<"logo">>, <<"big">>) ->
   [

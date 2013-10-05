@@ -17,30 +17,32 @@ init(_Opts) ->
     -> {ok, pivot_mab:arm(), pivot_mab:state()}
     | {error, any()}
     when State::pivot_mab:state(), Config::pivot_mab:config().
-select(State, _Config) ->
-  maybe_prepare_state(State, 0, State).
+select(State, Config) ->
+  maybe_prepare_state(State, 0, State, lists:member(explore, Config)).
 
 % Return arms that haven't been tried yet and total the number of arms
-maybe_prepare_state([{Arm, {0, _Score}}|_Arms], _TotalCount, State) ->
+maybe_prepare_state([{Arm, {0, _Score}}|_Arms], _TotalCount, State, _) ->
   {ok, Arm, State};
-maybe_prepare_state([{_Arm, {Count, _Score}}|Arms], TotalCount, State) ->
-  maybe_prepare_state(Arms, TotalCount+Count, State);
-maybe_prepare_state([], TotalCount, State) ->
-  choose_best_arm(TotalCount, {undefined, -1}, State, State).
+maybe_prepare_state([{_Arm, {Count, _Score}}|Arms], TotalCount, State, Explore) ->
+  maybe_prepare_state(Arms, TotalCount+Count, State, Explore);
+maybe_prepare_state([], TotalCount, State, Explore) ->
+  choose_best_arm(TotalCount, {undefined, -1}, State, State, Explore).
 
 % Iterate a list of arms and pick the highest
-choose_best_arm(TotalCount, {_HighArm, HighScore} = High, [{Arm, {Count, Score}}|Arms], State) ->
-  case calculate_score(TotalCount, Count, Score) of
+choose_best_arm(TotalCount, {_HighArm, HighScore} = High, [{Arm, {Count, Score}}|Arms], State, Explore) ->
+  case calculate_score(TotalCount, Count, Score, Explore) of
     NewScore when NewScore > HighScore ->
-      choose_best_arm(TotalCount, {Arm, NewScore}, Arms, State);
+      choose_best_arm(TotalCount, {Arm, NewScore}, Arms, State, Explore);
     _ ->
-      choose_best_arm(TotalCount, High, Arms, State)
+      choose_best_arm(TotalCount, High, Arms, State, Explore)
   end;
-choose_best_arm(_, {HighArm, _}, [], State) ->
+choose_best_arm(_, {HighArm, _}, [], State, _) ->
   {ok, HighArm, State}.
 
-calculate_score(TotalCount, Count, Score) ->
-  Score + math:sqrt((2 * math:log(TotalCount)) / Count).
+calculate_score(TotalCount, Count, Score, true) ->
+  Score + math:sqrt((2 * math:log(TotalCount)) / Count);
+calculate_score(_TotalCount, _Count, Score, _) ->
+  Score.
 
 -spec update(Arm, Reward, State, Config)
     -> {ok, State}
@@ -70,7 +72,7 @@ do_diff([{Arm, {OldCount, OldScore}}|OldState], [{Arm, {NewCount, NewScore}}|New
 
 report(State, _Config) ->
   TotalCount = count(State, 0),
-  {ok, TotalCount, [{Arm, calculate_score(TotalCount, Count, Score)} || {Arm, {Count, Score}} <- State]}.
+  {ok, TotalCount, [{Arm, calculate_score(TotalCount, Count, Score, true)} || {Arm, {Count, Score}} <- State]}.
 
 count([], TotalCount) ->
   TotalCount;

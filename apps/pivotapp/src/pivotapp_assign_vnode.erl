@@ -148,25 +148,28 @@ validate_assignments([{Bandit, Arm, _Count, _Expiration}|Assignments], Req = #re
   end.
 
 pick_bandit(Req = #req{ env=Env, app=App, enabled=EnabledBandits, now=Now, user=User }, Ref) ->
-  {ok, Bandit, _} = select_arm(?SUPER_BANDIT, EnabledBandits, Req, Ref),
+  {ok, ExplorationBandit} = select_arm(?SUPER_BANDIT, EnabledBandits, Req, Ref, true),
+  ArmsDB = pivotapp_ref:arms(Ref),
+  UserDB = pivotapp_ref:user(Ref),
 
-  case (pivotapp_ref:arms(Ref)):enabled(Env, App, Bandit) of
-    {ok, []} ->
-      {ok, [], Now + ?DEFAULT_TTL};
-    {ok, EnabledArms} ->
-      {ok, Arm, Config} = select_arm(Bandit, EnabledArms, Req, Ref),
+  Expiration = Now + ?DEFAULT_TTL,
 
-      Expiration = Now + fast_key:get(ttl, Config, ?DEFAULT_TTL),
+  Assignments = [begin
+    {ok, EnabledArms} = ArmsDB:enabled(Env, App, Bandit),
+    {ok, Arm} = select_arm(Bandit, EnabledArms, Req, Ref, ExplorationBandit =:= Bandit),
 
-      UserDB = pivotapp_ref:user(Ref),
-      ok = UserDB:assign(Env, App, User, Bandit, Arm, Expiration),
+    ok = UserDB:assign(Env, App, User, Bandit, Arm, Expiration),
 
-      {ok, [{Bandit, Arm}], Expiration};
-    Error ->
-      Error
-  end.
+    {Bandit, Arm}
+  end || Bandit <- EnabledBandits],
 
-select_arm(Bandit, EnabledArms, #req{ env=Env, app=App }, Ref) ->
+  {ok, Assignments, Expiration}.
+
+select_arm(Bandit, EnabledArms, Req, Ref, true) ->
+  select_arm(Bandit, EnabledArms, Req, Ref, [explore]);
+select_arm(Bandit, EnabledArms, Req, Ref, false) ->
+  select_arm(Bandit, EnabledArms, Req, Ref, []);
+select_arm(Bandit, EnabledArms, #req{ env=Env, app=App }, Ref, Options) ->
   StateDB = pivotapp_ref:state(Ref),
   ConfigDB = pivotapp_ref:config(Ref),
 
@@ -174,5 +177,5 @@ select_arm(Bandit, EnabledArms, #req{ env=Env, app=App }, Ref) ->
   {ok, Config} = ConfigDB:get(Env, App, Bandit),
 
   FilteredState = [{Arm, fast_key:get(Arm, MabState, {0, 0.0})} || Arm <- EnabledArms],
-  {ok, SelectedArm, _} = MabAlgo:select(FilteredState, Config),
-  {ok, SelectedArm, Config}.
+  {ok, SelectedArm, _} = MabAlgo:select(FilteredState, Config ++ Options),
+  {ok, SelectedArm}.
