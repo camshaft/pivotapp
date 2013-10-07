@@ -1,0 +1,9 @@
+{application,pivotapp_api,
+             [{description,[]},
+              {vsn,"1"},
+              {registered,[]},
+              {applications,[kernel,stdlib,crypto,ranch,cowboy,pivotapp]},
+              {mod,{pivotapp_api_app,[]}},
+              {env,[]},
+              {modules,[pivotapp_api,pivotapp_api_app,pivotapp_api_assignment,
+                        pivotapp_api_event]}]}.

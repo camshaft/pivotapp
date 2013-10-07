@@ -25,24 +25,24 @@ start(_StartType, _StartArgs) ->
   pivotapp_test_state_db:start_link(),
   pivotapp_test_user_db:start_link(),
 
-  [pivotapp_test_arms_db:add(<<"env">>, <<"app">>, <<"button-color">>, Arm) || Arm <- [
+  [pivotapp_test_arms_db:add(<<"production">>, <<"app">>, <<"button-color">>, Arm) || Arm <- [
     <<"red">>,
     <<"blue">>,
     <<"green">>
   ]],
-  [pivotapp_test_arms_db:add(<<"env">>, <<"app">>, <<"logo">>, Arm) || Arm <- [
+  [pivotapp_test_arms_db:add(<<"production">>, <<"app">>, <<"logo">>, Arm) || Arm <- [
     <<"big">>,
     <<"medium">>,
     <<"small">>
   ]],
 
-  pivotapp_test_state_db:init(<<"env">>, <<"app">>, <<"button-color">>, [
+  pivotapp_test_state_db:init(<<"production">>, <<"app">>, <<"button-color">>, [
     {<<"red">>, {0, 0.0}},
     {<<"blue">>, {0, 0.0}},
     {<<"green">>, {0, 0.0}}
   ]),
 
-  pivotapp_test_state_db:init(<<"env">>, <<"app">>, <<"logo">>, [
+  pivotapp_test_state_db:init(<<"production">>, <<"app">>, <<"logo">>, [
     {<<"big">>, {0, 0.0}},
     {<<"medium">>, {0, 0.0}},
     {<<"small">>, {0, 0.0}}

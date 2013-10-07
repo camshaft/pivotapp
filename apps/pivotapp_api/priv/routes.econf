@@ -1,0 +1,5 @@
+{'_', [
+  {"/", pivotapp_api_root, []},
+  {"/event", pivotapp_api_event, []},
+  {"/assignment", pivotapp_api_assignment, []}
+]}.

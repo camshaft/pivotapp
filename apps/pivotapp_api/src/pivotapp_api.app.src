@@ -1,0 +1,16 @@
+%% -*- erlang -*-
+{application, pivotapp_api, [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+    kernel,
+    stdlib,
+    crypto,
+    ranch,
+    cowboy,
+    pivotapp
+  ]},
+  {mod, { pivotapp_api_app, []}},
+  {env, []}
+]}.
