@@ -1,4 +1,4 @@
--module(pivotapp_api_event).
+-module(pivotapp_api_root).
 
 -export([init/3]).
 -export([handle/2]).
@@ -19,12 +19,6 @@ check_method(<<"GET">>, Req) ->
   {Event, Req3} = cowboy_req:qs_val(<<"e">>, Req2),
   {UserID, Req4} = cowboy_req:qs_val(<<"u">>, Req3),
   maybe_track(App, Event, UserID, Req4);
-check_method(<<"POST">>, Req) ->
-  {ok, Params, Req2} = cowboy_req:body_qs(Req),
-  App = fast_key:get(<<"a">>, Params),
-  Event = fast_key:get(<<"e">>, Params),
-  UserID = fast_key:get(<<"u">>, Params),
-  maybe_track(App, Event, UserID, Req2);
 check_method(_, Req) ->
   %% Method not allowed.
   cowboy_req:reply(405, Req).

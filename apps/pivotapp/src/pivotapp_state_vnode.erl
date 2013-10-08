@@ -21,7 +21,7 @@
 -export([reward/6]).
 
 %% private
--export([update/4]).
+-export([update/3]).
 
 -record(state, {
   partition,
@@ -38,7 +38,7 @@ reward(Node, Env, App, Bandit, Arm, Reward) ->
 
 %% Callbacks
 init([Partition]) ->
-  flush(),
+  timer:send_interval(1000, flush),
   {ok, #state { partition=Partition, buffer=buffer(), ref=pivotapp_ref:get() }}.
 
 handle_command({reward, Env, App, Bandit, Arm, Reward}, _Sender, State = #state{buffer = Buffer}) ->
@@ -48,10 +48,9 @@ handle_command({reward, Env, App, Bandit, Arm, Reward}, _Sender, State = #state{
 handle_info(flush, State = #state{ buffer=Buffer, ref=Ref }) ->
   case buffer_empty(State) of
     true ->
-      flush(),
       {ok, State};
     _ ->
-      spawn_link(?MODULE, update, [Buffer, self(), pivotapp_ref:state(Ref), pivotapp_ref:config(Ref)]),
+      spawn_link(?MODULE, update, [Buffer, pivotapp_ref:state(Ref), pivotapp_ref:config(Ref)]),
       {ok, State#state{buffer = buffer()}}
   end.
 
@@ -94,15 +93,13 @@ terminate(_Reason, _State) ->
 buffer_empty(#state{buffer = Buffer}) ->
   ets:info(Buffer, size) =:= 0.
 
-flush() ->
-  timer:send_after(1000, flush).
-
 buffer() ->
   ets:new(?MODULE, [duplicate_bag, public, {read_concurrency, true}]).
 
-update(Buffer, Parent, StateDB, ConfigDB) ->
+
+%% update the state for the bandits
+update(Buffer, StateDB, ConfigDB) ->
   ok = update_bandit(ets:first(Buffer), Buffer, StateDB, ConfigDB),
-  Parent ! flush,
   true = ets:delete(Buffer),
   ok.
 
